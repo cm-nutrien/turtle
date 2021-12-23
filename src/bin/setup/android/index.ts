@@ -99,66 +99,35 @@ async function _shellAppPostDownloadAction(sdkVersion: string, workingdir: strin
 }
 
 async function _installNodeModules(cwd: string) {
-  l.info(`installing dependencies in ${cwd} directory...`);
-  const command = await _shouldUseYarnOrNpm();
-  if (command === 'yarn') {
-      const flags = _getInstallFlagsForYarn();
-      // Keep in sync with /Dockerfile
-      // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
-      await ExponentTools.spawnAsyncThrowError(command, flags, {
-          pipeToLogger: true,
-          loggerFields: LOGGER_FIELDS,
-          cwd,
-      });
-      l.info('dependencies installed!');
-  } else {
-      // Keep in sync with /Dockerfile
-      // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
-      await ExponentTools.spawnAsyncThrowError(command, ['install', '--ignore-scripts', '--production'], {
-          pipeToLogger: true,
-          loggerFields: LOGGER_FIELDS,
-          cwd,
-      });
-      l.info('dependencies installed!');
-  }
-
+    l.info(`installing dependencies in ${cwd} directory...`);
+    const command = await _shouldUseYarnOrNpm();
+    // Keep in sync with /Dockerfile
+    // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
+    await ExponentTools.spawnAsyncThrowError(command, ['install'], {
+        pipeToLogger: true,
+        loggerFields: LOGGER_FIELDS,
+        cwd,
+    });
+    l.info('dependencies installed!');
 }
 
 async function _shouldUseYarnOrNpm() {
-  try {
-    await which('yarn');
-    return 'yarn';
-  } catch (err) {
-    return 'npm';
-  }
-}
-
-async function _getInstallFlagsForYarn() {
-        const {  stderr } = await ExponentTools.spawnAsyncThrowError(
-            'yarn',
-            ['-v'],
-            { stdio: 'pipe' },
-        );
-
-        const flags = [];
-        const matchResult = stderr.match(/(.*)/);
-        if (matchResult.startsWith('1.')) {
-            flags.push(...['install', '--ignore-scripts', '--production']);
-        } else {
-            flags.push('install');
-        }
-
-        return flags;
+    try {
+        await which('yarn');
+        return 'yarn';
+    } catch (err) {
+        return 'npm';
+    }
 }
 
 function _setEnvVars(envVars: object) {
-  Object
-    .entries(envVars)
-    .forEach(([key, value]) => process.env[key] = value);
+    Object
+        .entries(envVars)
+        .forEach(([key, value]) => process.env[key] = value);
 }
 
 function _alterPath(newPaths: string[]) {
-  const currentPaths = process.env.PATH ? process.env.PATH.split(':') : [];
-  const paths = [...newPaths, ...currentPaths];
-  process.env.PATH = paths.join(':');
+    const currentPaths = process.env.PATH ? process.env.PATH.split(':') : [];
+    const paths = [...newPaths, ...currentPaths];
+    process.env.PATH = paths.join(':');
 }
