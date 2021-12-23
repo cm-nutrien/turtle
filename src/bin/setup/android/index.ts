@@ -101,14 +101,27 @@ async function _shellAppPostDownloadAction(sdkVersion: string, workingdir: strin
 async function _installNodeModules(cwd: string) {
   l.info(`installing dependencies in ${cwd} directory...`);
   const command = await _shouldUseYarnOrNpm();
-  // Keep in sync with /Dockerfile
-  // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
-  await ExponentTools.spawnAsyncThrowError(command, ['install', '--ignore-scripts', '--production'], {
-    pipeToLogger: true,
-    loggerFields: LOGGER_FIELDS,
-    cwd,
-  });
-  l.info('dependencies installed!');
+  if (command === 'yarn') {
+      const flags = _getInstallFlagsForYarn();
+      // Keep in sync with /Dockerfile
+      // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
+      await ExponentTools.spawnAsyncThrowError(command, flags, {
+          pipeToLogger: true,
+          loggerFields: LOGGER_FIELDS,
+          cwd,
+      });
+      l.info('dependencies installed!');
+  } else {
+      // Keep in sync with /Dockerfile
+      // --prod requires --ignore-scripts (otherwise expo-yarn-workspaces errors as missing)
+      await ExponentTools.spawnAsyncThrowError(command, ['install', '--ignore-scripts', '--production'], {
+          pipeToLogger: true,
+          loggerFields: LOGGER_FIELDS,
+          cwd,
+      });
+      l.info('dependencies installed!');
+  }
+
 }
 
 async function _shouldUseYarnOrNpm() {
@@ -118,6 +131,24 @@ async function _shouldUseYarnOrNpm() {
   } catch (err) {
     return 'npm';
   }
+}
+
+async function _getInstallFlagsForYarn() {
+        const {  stderr } = await ExponentTools.spawnAsyncThrowError(
+            'yarn',
+            ['-v'],
+            { stdio: 'pipe' },
+        );
+
+        const flags = [];
+        const matchResult = stderr.match(/(.*)/);
+        if (matchResult.startsWith('1.')) {
+            flags.push(...['install', '--ignore-scripts', '--production']);
+        } else {
+            flags.push('install');
+        }
+
+        return flags;
 }
 
 function _setEnvVars(envVars: object) {
